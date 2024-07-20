@@ -1,6 +1,7 @@
 import bs4
 import requests as r
 import re
+from tqdm import tqdm
 from time import sleep
 
 from classes.ETF import ETF
@@ -18,11 +19,11 @@ def get_ETF(link: str) -> ETF:
 	soup = bs4.BeautifulSoup(res.content, 'html.parser')
 	name = soup.find('a', class_='c-faceplate__company-link').get_text().strip()
 	isin, company = soup.find('h2', class_='c-faceplate__isin').get_text().split(' - ')
-	price = float(soup.find('span', class_='c-instrument c-instrument--last').get_text())
+	price = float(soup.find('span', class_='c-instrument c-instrument--last').get_text().replace(',', '.').replace(' ', ''))
 	headers = soup.find_all('p', class_='c-list-info__value u-color-big-stone')
 	ref_index = headers[0].get_text().strip()
 	category = headers[1].get_text().strip()
-	fees = float(soup.find('div', class_='c-list-info c-list-info--nopadding-bottom').find_all('li')[2].find_all('p')[1].get_text().replace('%', '').strip())
+	fees = float(soup.find('div', class_='c-list-info c-list-info--nopadding-bottom').find_all('li')[2].find_all('p')[1].get_text().replace('%', '').strip().replace(',', '.').replace(' ', ''))
 	return ETF(isin, name, link, category, company, price, fees, ref_index)
 
 def ETF_scrapper(number_ETFs: int, first_page: str, main_url: str) -> list[ETF]:
@@ -36,11 +37,11 @@ def ETF_scrapper(number_ETFs: int, first_page: str, main_url: str) -> list[ETF]:
 			res = r.get(f'https://www.boursorama.com/bourse/trackers/recherche/autres/page-{page_number}?beginnerEtfSearch%5Bcurrency%5D=EUR&beginnerEtfSearch%5Bcurrent%5D=characteristics&beginnerEtfSearch%5BisEtf%5D=1&beginnerEtfSearch%5Btaxation%5D=1')
 		soup = bs4.BeautifulSoup(res.content, 'html.parser')
 		tags = soup.find_all('tr', class_='c-table__row')[1:]
-		for tag in tags:
+		for tag in tqdm(tags, desc=f'Scrapping ETFs on page {page_number}'):
 			link = f'{main_url}{tag.find('a').get('href')}'
 			etf = get_ETF(link)
 			output.append(etf)
-			sleep(1)
+			sleep(0.2)
 		counter += len(output) - counter
 		page_number += 1
 	return output
@@ -62,11 +63,11 @@ def ETF_lev_scrapper(etf_lev_link: str, main_url: str) -> list[ETF]:
 	res = r.get(etf_lev_link)
 	soup = bs4.BeautifulSoup(res.content, 'html.parser')
 	tags = soup.find_all('tr', class_='c-table__row')[1:]
-	for tag in tags:
+	for tag in tqdm(tags, desc='Scrapping leveradged ETFs'):
 		link = f'{main_url}{tag.find('a').get('href')}'
 		if is_PEA_eligible(link):
 			etf = get_ETF(link)
 			etf.is_leveradged = True
 			output.append(etf)
-			sleep(1)
+			sleep(0.2)
 	return output

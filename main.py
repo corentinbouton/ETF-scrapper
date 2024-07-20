@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -29,7 +30,7 @@ def main():
 		'is_leveradged': [etf.is_leveradged for etf in etfs]
 	})
 
-	df.to_excel('./data/output.xlsx', index=False)
+	df.to_excel(f'./data/ETFs_{datetime.today().strftime(r'%d-%m-%y')}.xlsx', index=False)
 
 if __name__ == '__main__':
 	main()
